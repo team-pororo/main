@@ -1,51 +1,100 @@
-/** @file opcontrol.c
- * @brief File for operator control code
- *
- * This file should contain the user operatorControl() function and any functions related to it.
- *
- * PROS contains FreeRTOS (http://www.freertos.org) whose source code may be
- * obtained from http://sourceforge.net/projects/freertos/files/ or on request.
- */
-
-/*
-Team Pororo Driver Control Program
-Copyright (C) 2018 Wesley Chalmers and Ashton Maze
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #include "main.h"
+#include "math.h"/*
+#include "drivetrain.h"
+#include "balllift.h"
+#include "claw.h"
+#include "clawlift.h"
+#include "launcher.h"
+#include "lifter.h"*/
 
-/*
- * Runs the user operator control code. This function will be started in its own task with the
- * default priority and stack size whenever the robot is enabled via the Field Management System
- * or the VEX Competition Switch in the operator control mode. If the robot is disabled or
- * communications is lost, the operator control task will be stopped by the kernel. Re-enabling
- * the robot will restart the task, not resume it from where it left off.
- *
- * If no VEX Competition Switch or Field Management system is plugged in, the VEX Cortex will
- * run the operator control task. Be warned that this will also occur if the VEX Cortex is
- * tethered directly to a computer via the USB A to A cable without any VEX Joystick attached.
- *
- * Code running in this task can take almost any action, as the VEX Joystick is available and
- * the scheduler is operational. However, proper use of delay() or taskDelayUntil() is highly
- * recommended to give other tasks (including system tasks such as updating LCDs) time to run.
- *
- * This task should never exit; it should end with some kind of infinite loop, even if empty.
- */
+#define ARM_MIN 220
+#define ARM_FLIP 680
+#define ARM_UNDER 1450 // goes under an elevated cap, doesn't flip it
+#define ARM_DESCORE 1600
+#define ARM_MAX 2200
+#define ARM_EPSILON 16 // resolution
+
+int armlevel = ARM_MIN;
+
+void calibrateArm() {
+	int value = analogRead(1);
+	printf("%u\n", value);
+}
+
+void controlDrive() {
+	int left = joystickGetAnalog(1, 3);
+	int right = -joystickGetAnalog(1, 2) * 0.8;
+	motorSet(2, left);
+	motorSet(3, right);
+}
+
+void controlPunch() {
+	bool forward = joystickGetDigital(1, 6, JOY_UP);
+	bool reverse = joystickGetDigital(1, 6, JOY_DOWN);
+	if (forward) {
+		motorSet(1, 127);
+	} else if (reverse) {
+		motorSet(1, -128);
+	} else {
+		motorSet(1, 0);
+	}
+}
+
+void controlArm() {
+	bool up = joystickGetDigital(1, 6, JOY_UP);
+	bool down = joystickGetDigital(1, 6, JOY_DOWN);
+	if (up) {
+		armlevel += 50;
+	} else if (down) {
+		armlevel -= 50;
+	}
+}
+
+void controlIntake() {
+	bool forward = joystickGetDigital(1, 5, JOY_UP);
+	bool reverse = joystickGetDigital(1, 5, JOY_DOWN);
+	if (forward) {
+		motorSet(4, 127);
+	} else if (reverse) {
+		motorSet(4, -128);
+	} else {
+		motorSet(4, 0);
+	}
+}
+
+void maintainArm() {
+	int currentArmState = analogRead(1);
+	int scalar;
+	int delta = abs(currentArmState - armlevel);
+	if (delta < 32) {
+		scalar = 8;
+	} else if (delta < 64) {
+		scalar = 16;
+	} else if (delta < 128) {
+		scalar = 32;
+	} else if (delta < 256) {
+		scalar = 64;
+	} else {
+		scalar = 127;
+	}
+	if (currentArmState < armlevel - ARM_EPSILON) {
+		motorSet(1, scalar);
+	} else if (currentArmState > armlevel + ARM_EPSILON) {
+		motorSet(1, -scalar);
+	} else {
+		motorSet(1, 0);
+	}
+}
+
+// the operatorControl loop
 void operatorControl() {
 	while (1) {
+		//controlDrive();
+		//controlIntake();
+		//controlPunch();
+    calibrateArm();
+		maintainArm();
+		controlArm();
 		delay(20);
 	}
 }

@@ -1188,7 +1188,7 @@ void __attribute__ ((format (printf, 3, 4))) lcdPrint(PROS_FILE *lcdPort, unsign
  * For example, if the left and right buttons are pushed, (1 | 4) = 5 will be returned. 0 is
  * returned if no buttons are pushed.
  *
- * @param lcdPort the LCD to poll, either uart1 or uart2
+ * @param Port the LCD to poll, either uart1 or uart2
  * @return the buttons pressed as a bit mask
  */
 unsigned int lcdReadButtons(PROS_FILE *lcdPort);
