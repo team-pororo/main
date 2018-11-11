@@ -163,6 +163,9 @@ void controlIntake() {
 }
 
 void maintainArm() {
+
+	// WHO'S CALLING MY CODE SHADY! I PITY THE FOOL WHO'S CALLIN WESLEY'S
+	// CODE SHADY! PITY I SAY!
 	int currentArmState = analogRead(ARMPOT);
 	if (armHolding) {
 		int scalar;
