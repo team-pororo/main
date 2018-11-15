@@ -15,11 +15,11 @@
 #define ARMPOT 1
 
 // arm constants
-#define ARM_MIN 3200 // minimum safe position before hitting ground
-#define ARM_FLIP 2700 // flip a cap on the ground
-#define ARM_UNDER 1900 // goes under an elevated cap, doesn't flip it
-#define ARM_DESCORE 1570 // max vertical position, descore a cap on post
-#define ARM_MAX 1000 // maximum safe position vertically before hitting intake
+#define ARM_MIN 700 // minimum safe position before hitting ground
+#define ARM_FLIP 1220 // flip a cap on the ground
+#define ARM_UNDER 1800 // goes under an elevated cap, doesn't flip it
+#define ARM_DESCORE 2250 // max vertical position, descore a cap on post
+#define ARM_MAX 3200 // maximum safe position vertically before hitting intake
 #define ARM_EPSILON 16 // resolution
 
 // intake-forward button is toggle on/off so it doesn't have to be held down
@@ -73,7 +73,7 @@ void controlDrive() {
 		r = (v+w)/2;
 		l = (v-w)/2;
 
-		if (inverseDrive) {
+		if (inverseDriving) {
 			motorSet(L_DRIVE, -r);
 			motorSet(R_DRIVE, l);
 		} else {
@@ -92,6 +92,7 @@ void calibrateArm() {
 	// Write arm values to serial to allow for manual calibration of presets
 	int value = analogRead(ARMPOT);
 	printf("%u\t%u\n", value, armlevel);
+	delay(200); // slow down the control loop to prevent serial link saturation
 }
 
 void controlPunch() {
@@ -117,14 +118,14 @@ void controlArm() {
 	//bool retract = joystickGetDigital(1, 7, JOY_RIGHT);
 	int currentArmState = analogRead(1);
 	//printf("UP/DN:\t%u\t%u\t%u\n", up, down, currentArmState);
-	if (down && currentArmState < ARM_MIN) {
+	if (down && currentArmState > ARM_MIN) {
 		armHolding = false;
 		//printf("Setting armHolding to false");
 		motorSet(ARM, -16);
-	} else if (up && currentArmState > ARM_MAX) {
+	} else if (up && currentArmState < ARM_MAX) {
 		armHolding = false;
 		//printf("Setting armHolding to false");
-		motorSet(ARM, 32);
+		motorSet(ARM, 64);
 	} else {
 		if (!armHolding) {
 			armHolding = true;
@@ -186,25 +187,25 @@ void maintainArm() {
 		int scalar;
 		int delta = abs(currentArmState - armlevel);
 		if (delta < 32) {
-			scalar = 4;
-		} else if (delta < 64) {
 			scalar = 8;
-		} else if (delta < 128) {
+		} else if (delta < 64) {
 			scalar = 16;
-		} else if (delta < 256) {
+		} else if (delta < 128) {
 			scalar = 32;
-		} else {
+		} else if (delta < 256) {
 			scalar = 64;
+		} else {
+			scalar = 128;
 		}
 		if (currentArmState < armlevel - ARM_EPSILON) {
-			motorSet(ARM, -scalar);
-		} else if (currentArmState > armlevel + ARM_EPSILON) {
 			motorSet(ARM, scalar);
+		} else if (currentArmState > armlevel + ARM_EPSILON) {
+			motorSet(ARM, -scalar);
 		} else {
 			motorSet(ARM, 0);
 		}
 	} else {
-		if (currentArmState < ARM_MAX || currentArmState > ARM_MIN) {
+		if (currentArmState > ARM_MAX || currentArmState < ARM_MIN) {
 			motorSet(ARM, 0);
 		}
 	}
